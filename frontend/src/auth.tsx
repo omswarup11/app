@@ -18,13 +18,18 @@ type AuthState = {
 type AuthCtx = AuthState & {
   loginWithOtp: (phone: string, code: string) => Promise<string>;
   loginWithGoogle: (email: string, name: string) => Promise<string>;
+  loginWithSupabase: (accessToken: string) => Promise<string>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
-const homeFor = (role: string) => (role === "patient" ? "/(tabs)" : "/staff");
+const homeFor = (role: string) =>
+  role === "patient" ? "/(tabs)"
+  : role === "receptionist" ? "/reception"
+  : role === "doctor" ? "/doctor"
+  : "/staff";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -59,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithOtp = async (phone: string, code: string) => finishLogin(await api.verifyOtp(phone, code));
   const loginWithGoogle = async (email: string, name: string) => finishLogin(await api.google(email, name));
+  const loginWithSupabase = async (accessToken: string) => finishLogin(await api.supabaseLogin(accessToken));
 
   const logout = async () => {
     try { await api.logout(); } catch {}
@@ -68,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ ...state, loginWithOtp, loginWithGoogle, logout, refresh }}>
+    <Ctx.Provider value={{ ...state, loginWithOtp, loginWithGoogle, loginWithSupabase, logout, refresh }}>
       {children}
     </Ctx.Provider>
   );

@@ -13,12 +13,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth";
+import { SUPABASE_ENABLED, USE_SUPABASE_PHONE, supabaseGoogle, supabaseSendPhoneOtp, supabaseVerifyPhoneOtp } from "@/src/supabase";
 import { C, F, RADIUS, shadow } from "@/src/theme";
 import { PrimaryButton } from "@/src/ui";
 
 export default function Login() {
   const insets = useSafeAreaInsets();
-  const { loginWithOtp, loginWithGoogle } = useAuth();
+  const { loginWithOtp, loginWithGoogle, loginWithSupabase } = useAuth();
   const [step, setStep] = useState<"phone" | "otp" | "done">("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -40,8 +41,12 @@ export default function Login() {
   const sendOtp = async () => {
     setError(""); setBusy(true);
     try {
-      const { api } = await import("@/src/api");
-      await api.sendOtp(phone);
+      if (USE_SUPABASE_PHONE) {
+        await supabaseSendPhoneOtp(`+91${phone}`);
+      } else {
+        const { api } = await import("@/src/api");
+        await api.sendOtp(phone);
+      }
       setOtp("");
       setStep("otp");
       setTimeout(() => otpRef.current?.focus(), 350);
@@ -55,7 +60,13 @@ export default function Login() {
   const verify = async (code: string) => {
     setBusy(true); setError("");
     try {
-      const path = await loginWithOtp(phone, code);
+      let path: string;
+      if (USE_SUPABASE_PHONE) {
+        const token = await supabaseVerifyPhoneOtp(`+91${phone}`, code);
+        path = await loginWithSupabase(token);
+      } else {
+        path = await loginWithOtp(phone, code);
+      }
       setHomePath(path);
       setStep("done");
     } catch (e: any) {
@@ -76,11 +87,14 @@ export default function Login() {
   const google = async () => {
     setBusy(true); setError("");
     try {
-      const path = await loginWithGoogle("ananya.google@gmail.com", "Ananya Sharma");
+      const token = await supabaseGoogle();
+      const path = await loginWithSupabase(token);
       setHomePath(path);
       setStep("done");
     } catch (e: any) {
-      setError(e.message || "Google sign-in failed");
+      setError(e.message?.includes("provider is not enabled")
+        ? "Google sign-in isn't enabled on Supabase yet."
+        : (e.message || "Google sign-in failed"));
     } finally {
       setBusy(false);
     }
@@ -156,7 +170,7 @@ export default function Login() {
                 onChangeText={(t) => { setError(""); setOtp(t.replace(/\D/g, "").slice(0, 6)); }}
               />
             </Pressable>
-            <Text style={styles.devHint}>Dev OTP: 123456</Text>
+            {!USE_SUPABASE_PHONE && <Text style={styles.devHint}>Dev OTP: 123456</Text>}
             {!!error && <Text style={styles.error}>{error}</Text>}
             {resendIn > 0 ? (
               <Text style={styles.resend}>Resend code in {resendIn}s</Text>

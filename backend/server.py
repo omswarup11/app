@@ -11,6 +11,7 @@ from routes_booking import router as booking_router
 from routes_clinics import router as clinics_router
 from routes_queue import router as queue_router
 from routes_records import router as records_router
+from routes_staff import router as staff_router
 from seed import seed_if_empty
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -31,6 +32,7 @@ app.include_router(clinics_router)
 app.include_router(booking_router)
 app.include_router(queue_router)
 app.include_router(records_router)
+app.include_router(staff_router)
 
 
 @app.get("/api/")

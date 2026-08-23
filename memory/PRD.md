@@ -51,6 +51,18 @@ super-admin clinic + admin management, RLS + backend authorization, audit logs.
   Confirmation (ticket), Queue (live + gray-dot offline fix), Records (reports + prescriptions).
 - Staff placeholder screen routing non-patient roles by backend role.
 
+### 2026-06 (Phase 2)
+- Reception console: doctor selector, live now-serving + waiting list, Call next / Skip / Done,
+  Add walk-in bottom sheet with token generation, activity feed. (app/reception.tsx)
+- Doctor console: today's patients list + Call next; consultation screen with vitals, clinical
+  notes (chief complaint/notes/diagnosis/instructions), medicine sheet (multi), lab-order chips,
+  Save draft + Complete consultation. (app/doctor.tsx, app/consultation/[id].tsx)
+- New `consultations` table; complete-consultation writes prescription+items+lab_tests+record,
+  marks appointment/queue completed, notifies patient (verified propagation).
+- Supabase Auth wired: real Google OAuth (expo-web-browser) + phone OTP (behind
+  EXPO_PUBLIC_USE_SUPABASE_PHONE flag) → /api/auth/supabase token exchange. Needs dashboard
+  provider config to go live; dev-OTP remains default so all seeded roles keep working.
+
 ## Backlog (prioritized)
 ### P0 (next)
 - Supabase Auth (phone OTP via test numbers + Google browser OAuth), map auth.users → profiles.

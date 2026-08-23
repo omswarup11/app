@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="18" time="60.081" timestamp="2026-08-23T05:53:52.219884+00:00" hostname="agent-env-9cdb79e2-2fae-4ea0-8453-4053178d4d4a"><testcase classname="tests.test_phase2_staff.TestPhase2RoleSecurity" name="test_patient_forbidden_on_queue_next" time="13.183" /><testcase classname="tests.test_phase2_staff.TestPhase2RoleSecurity" name="test_patient_forbidden_on_walk_in" time="1.711" /><testcase classname="tests.test_phase2_staff.TestReceptionWalkIn" name="test_walk_in_new_patient_mints_incremented_token" time="19.948"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_phase2_staff.py:96: in test_walk_in_new_patient_mints_incremented_token
+    assert r.status_code == 200, r.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="tests.test_phase2_staff.TestPhase2RoleSecurity" name="test_patient_forbidden_on_doctor_today" time="1.699" /><testcase classname="tests.test_phase2_staff.TestReceptionWalkIn" name="test_walk_in_with_phone_reuses_existing_user" time="2.800"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_phase2_staff.py:127: in test_walk_in_with_phone_reuses_existing_user
+    assert r.status_code == 200, r.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="tests.test_phase2_staff.TestReceptionWalkIn" name="test_walk_in_bad_doctor_404" time="1.880" /><testcase classname="tests.test_phase2_staff.TestPhase2RoleSecurity" name="test_non_owner_doctor_cannot_open_consultation" time="21.589" /><testcase classname="tests.test_phase2_staff.TestDoctorConsultationFlow" name="test_get_consultation_returns_full_bundle" time="13.978" /><testcase classname="tests.test_phase2_staff.TestReceptionQueueControls" name="test_next_skip_complete_cycle" time="3.689"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:1116: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_phase2_staff.py:157: in test_next_skip_complete_cycle
+    ).json()
+      ^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:1120: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="tests.test_phase2_staff.TestDoctorConsultationFlow" name="test_save_draft_persists" time="10.922" /><testcase classname="tests.test_phase2_staff.TestReceptionQueueControls" name="test_call_next_advances_or_says_no_more" time="8.192" /><testcase classname="tests.test_phase2_staff.TestDoctorConsultationFlow" name="test_complete_creates_prescription_and_lab_orders" time="2.649"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:1116: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_phase2_staff.py:357: in test_complete_creates_prescription_and_lab_orders
+    ).json()
+      ^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:1120: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="tests.test_phase2_staff.TestReceptionQueueControls" name="test_skip_bad_entry_404" time="2.084" /><testcase classname="tests.test_phase2_staff.TestDoctorToday" name="test_doctor_today_returns_patients_list" time="4.930" /><testcase classname="tests.test_phase2_staff.TestReceptionStaffDoctors" name="test_staff_doctors_returns_active_doctors" time="0.000" /><testcase classname="tests.test_phase2_staff.TestReceptionStaffDoctors" name="test_staff_doctors_patient_forbidden" time="5.867" /><testcase classname="tests.test_phase2_staff.TestDoctorToday" name="test_doctor_today_patient_forbidden" time="1.643" /><testcase classname="tests.test_phase2_staff.TestSupabaseAuth" name="test_bogus_supabase_token_401" time="0.909" /></testsuite></testsuites>

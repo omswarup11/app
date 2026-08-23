@@ -345,6 +345,23 @@ class SupportTicket(Base, TimestampMixin):
     __table_args__ = (Index("ix_ticket_clinic_status", "clinic_id", "status"),)
 
 
+class Consultation(Base, TimestampMixin):
+    __tablename__ = "consultations"
+    id: Mapped[str] = _pk("con")
+    appointment_id: Mapped[str] = mapped_column(
+        ForeignKey("appointments.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    patient_id: Mapped[str] = mapped_column(ForeignKey("patients.id", ondelete="CASCADE"))
+    doctor_id: Mapped[str] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"))
+    clinic_id: Mapped[str] = mapped_column(ForeignKey("clinics.id", ondelete="CASCADE"))
+    chief_complaint: Mapped[str] = mapped_column(Text, default="")
+    clinical_notes: Mapped[str] = mapped_column(Text, default="")
+    diagnosis: Mapped[str] = mapped_column(Text, default="")
+    instructions: Mapped[str] = mapped_column(Text, default="")
+    vitals: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), default="draft")  # draft|completed
+
+
 class Counter(Base):
     __tablename__ = "counters"
     key: Mapped[str] = mapped_column(String(120), primary_key=True)

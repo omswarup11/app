@@ -123,6 +123,55 @@ async def google_login(body: GoogleIn, session: AsyncSession = Depends(get_sessi
     return {"token": tok, "user": _user_public(user), "role": user.role}
 
 
+class SupabaseIn(BaseModel):
+    access_token: str
+
+
+@router.post("/supabase")
+async def supabase_login(body: SupabaseIn, session: AsyncSession = Depends(get_session)):
+    """Verify a Supabase access token, map to our profile, and issue an app session."""
+    from core import SUPABASE_ANON_KEY, SUPABASE_URL
+    import httpx
+
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise HTTPException(503, "Supabase auth not configured")
+    async with httpx.AsyncClient(timeout=12) as c:
+        r = await c.get(
+            f"{SUPABASE_URL.rstrip('/')}/auth/v1/user",
+            headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {body.access_token}"},
+        )
+    if r.status_code != 200:
+        raise HTTPException(401, "Invalid or expired Supabase token")
+    su = r.json()
+    sid = su.get("id")
+    email = (su.get("email") or "").strip().lower() or None
+    phone = _norm_phone(su.get("phone") or "") or None
+
+    user = (await session.execute(select(User).where(User.supabase_uid == sid))).scalar_one_or_none()
+    if not user and phone:
+        user = (await session.execute(select(User).where(User.phone == phone))).scalar_one_or_none()
+    if not user and email:
+        user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if not user:
+        user = User(id=new_id("usr"), phone=phone, email=email, name=su.get("user_metadata", {}).get("full_name", "") or "", role="patient")
+        session.add(user)
+        await session.flush()
+        session.add(Patient(id=new_id("pat"), user_id=user.id, name=user.name))
+    user.supabase_uid = sid
+    if phone and not user.phone:
+        user.phone = phone
+    if email and not user.email:
+        user.email = email
+    if user.role == "patient":
+        pat = (await session.execute(select(Patient).where(Patient.user_id == user.id))).scalar_one_or_none()
+        if not pat:
+            session.add(Patient(id=new_id("pat"), user_id=user.id, name=user.name))
+    tok = await _issue_session(session, user)
+    await audit(session, user.id, "login", "user", user.id, {"method": "supabase"})
+    await session.commit()
+    return {"token": tok, "user": _user_public(user), "role": user.role}
+
+
 @router.get("/me")
 async def me(principal: Principal = Depends(get_principal)):
     return {

@@ -31,6 +31,9 @@ RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
 RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_LIVE = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET)
 
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+
 SUPER_ADMIN_NAME = os.environ.get("SUPER_ADMIN_NAME", "Vikram Shetty")
 SUPER_ADMIN_PHONE = os.environ.get("SUPER_ADMIN_PHONE", "9000000001")
 SUPER_ADMIN_EMAIL = os.environ.get("SUPER_ADMIN_EMAIL", "owner@sanjeevan.health")

@@ -39,6 +39,8 @@ export const api = {
     request("/auth/verify-otp", { method: "POST", body: { phone, code }, auth: false }),
   google: (email: string, name: string) =>
     request("/auth/google", { method: "POST", body: { email, name }, auth: false }),
+  supabaseLogin: (access_token: string) =>
+    request("/auth/supabase", { method: "POST", body: { access_token }, auth: false }),
   me: () => request("/auth/me"),
   logout: () => request("/auth/logout", { method: "POST" }),
   // clinics
@@ -62,6 +64,19 @@ export const api = {
   labTests: () => request("/lab-tests"),
   notifications: () => request("/notifications"),
   markRead: (id: string) => request(`/notifications/${id}/read`, { method: "POST" }),
+  // staff / doctor
+  staffDoctors: () => request("/staff/doctors"),
+  staffQueue: (doctorId: string) => request(`/queue?doctor_id=${encodeURIComponent(doctorId)}`),
+  queueNext: (doctorId: string) => request("/queue/next", { method: "POST", body: { doctor_id: doctorId } }),
+  queueSkip: (entryId: string) => request(`/queue/${entryId}/skip`, { method: "POST" }),
+  queueComplete: (entryId: string) => request(`/queue/${entryId}/complete`, { method: "POST" }),
+  walkIn: (payload: any) => request("/queue/walk-in", { method: "POST", body: payload }),
+  doctorToday: () => request("/doctor/today"),
+  getConsultation: (apptId: string) => request(`/doctor/consultation/${apptId}`),
+  saveConsultation: (apptId: string, payload: any) =>
+    request(`/doctor/consultation/${apptId}/save`, { method: "POST", body: payload }),
+  completeConsultation: (apptId: string, payload: any) =>
+    request(`/doctor/consultation/${apptId}/complete`, { method: "POST", body: payload }),
 };
 
 export function socketUrl(token: string): string {

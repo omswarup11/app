@@ -29,6 +29,9 @@ export default function RootLayout() {
             <Stack.Screen name="login" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="staff" />
+            <Stack.Screen name="reception" />
+            <Stack.Screen name="doctor" />
+            <Stack.Screen name="consultation/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="payment" options={{ presentation: "card", animation: "slide_from_right" }} />
             <Stack.Screen name="confirmation" options={{ animation: "fade" }} />
           </Stack>

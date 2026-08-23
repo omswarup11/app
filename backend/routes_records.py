@@ -77,6 +77,7 @@ async def list_prescriptions(
         out.append(
             {
                 "id": p.id,
+                "appointment_id": p.appointment_id,
                 "diagnosis": p.diagnosis,
                 "notes": p.notes,
                 "instructions": p.instructions,
@@ -116,6 +117,7 @@ async def list_lab_tests(
         "lab_tests": [
             {
                 "id": t.id,
+                "appointment_id": t.appointment_id,
                 "name": t.name,
                 "status": t.status,
                 "created_at": t.created_at.isoformat(),

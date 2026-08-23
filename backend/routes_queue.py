@@ -4,6 +4,7 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import new_id
@@ -282,10 +283,14 @@ async def add_walk_in(
     tok = await next_seq(session, key)
     appt = Appointment(id=new_id("apt"), clinic_id=doc.clinic_id, doctor_id=doc.id,
                        patient_id=pat.id, appointment_date=today,
-                       appointment_time="walk-in", status="confirmed", source="walk_in",
+                       appointment_time=f"w{tok}", status="confirmed", source="walk_in",
                        reason=body.reason, token_number=tok, consultation_fee=doc.consultation_fee)
     session.add(appt)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(409, "Could not add walk-in, please retry")
     session.add(QueueEntry(id=new_id("que"), clinic_id=doc.clinic_id, doctor_id=doc.id,
                            patient_id=pat.id, appointment_id=appt.id, date=today,
                            token_number=tok, queue_position=tok, status="waiting",
@@ -298,7 +303,7 @@ async def add_walk_in(
     return {"ok": True, "token_number": tok, "snapshot": await _push(session, doc.clinic_id, doc.id)}
 
 
-@router.websocket("/api/ws")
+@router.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket, token: str = ""):
     await ws.accept()
     rooms: list[str] = []

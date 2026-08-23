@@ -1,0 +1,61 @@
+{
+  "summary": "Phase-2 (Reception console + Doctor consultation + Supabase auth exchange) verified. Backend suite `test_phase2_staff.py`: 14/18 pass, 4 fail — all four failures trace to the SAME critical bug: the second (and subsequent) walk-in for the same doctor on the same day 500s because /api/queue/walk-in always creates an Appointment with appointment_time='walk-in', which violates the partial-unique index `uq_appt_doctor_slot_live` (doctor_id, appointment_date, appointment_time WHERE status IN confirmed/in_progress/completed). Postgres asyncpg.UniqueViolationError bubbles up as a 500. First walk-in of the day works; every subsequent one fails. All other Phase-2 flows pass: staff/doctors (200 + 403 for patients), queue skip / complete / call-next (advance in_consultation->completed and mint next in_consultation), doctor/today (200 + 403 for patients), doctor/consultation GET/save/complete (with prescription + lab_orders persisted and visible to the patient via /prescriptions & /lab-tests), role security (patient 403 on staff+doctor endpoints; a different doctor gets 404 on another doctor's appointment_id), and /api/auth/supabase returns 401 on a bogus token. Frontend (mobile web 390x844): receptionist 9000000004 -> /reception with all Phase-2 testIDs present (call-next-button, add-walkin-fab, reception-logout, queue-row-*, skip-*, complete-*, walkin-name/walkin-phone/walkin-reason/walkin-submit, doctor chips recep-doc-*); Doctor 9000000003 -> /doctor with doctor-call-next visible; consultation screen has field-diagnosis, med-name-0, add-medicine, lab-CBC, save-draft, complete-consultation, consult-back. UI, navigation and login flow all behave correctly. No deprecated Expo packages, no red-screen errors. Console still emits the cosmetic RNW `shadow*` deprecation warnings noted in iteration_1.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/queue/walk-in",
+        "issue": "Second (and every subsequent) walk-in for the same doctor on the same day returns 500. Root cause: Appointment is inserted with appointment_time='walk-in' (constant) but the table has a partial-unique index uq_appt_doctor_slot_live on (doctor_id, appointment_date, appointment_time) WHERE status IN ('confirmed','in_progress','completed'). Postgres raises UniqueViolationError -> uncaught -> 500. Reference: /app/backend/routes_queue.py:285 (appointment_time='walk-in') vs /app/backend/models.py:160-168 (partial-unique index). Fix options: (a) set appointment_time to a unique per-walk-in value that fits the String(10) column, e.g. f'w{tok}' (max 6 chars for tok<=99999), or (b) exclude source='walk_in' from the partial index predicate.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/queue/walk-in",
+        "issue": "500 responses currently leak SQL details to logs but return a generic Internal Server Error to the client — even after the fix, wrap Appointment insert in a try/except IntegrityError -> HTTP 409 with a friendly message so the reception app can surface it as 'Please try again' instead of a silent 500."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Reception 'Add walk-in' -> Add & generate token",
+        "issue": "When the walk-in backend 500s (bug above), the reception app catches the exception silently (submitWalkIn wraps setSaving in try/finally but there is no user-visible error toast). The user sees the modal close (actually the modal stays open because setModal(false) is inside the try and never runs) — but no error is shown. Recommend surfacing api errors via a toast/inline banner.",
+        "affected_testIDs": ["walkin-submit"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "react-native-web shadow* deprecation",
+        "issue": "Console emits 'shadow* style props are deprecated. Use boxShadow.' twice on the login screen. Originates from the shadow() helper in /app/frontend/src/theme.ts. Non-blocking; already flagged in iteration_1."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase2_staff.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_phase2.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix multi-walk-in-per-day 500. Simplest patch in /app/backend/routes_queue.py add_walk_in: set appointment_time to a unique short value like f'w{tok}' (fits String(10)) or f'wi-{tok}' (max 8 chars for tok<=99999), keeping source='walk_in' for reporting. Verify pytest test_phase2_staff.py::TestReceptionWalkIn passes after the change.",
+    "HIGH: Wrap the walk-in Appointment insert in try/except IntegrityError and return 409 with a friendly detail; then surface that in reception.tsx submitWalkIn as an inline error/toast (currently swallowed).",
+    "(Optional) In /app/backend/routes_staff.py::_get_owned_appt, differentiate 403 (doctor from another clinic) vs 404 (bad id). Current implementation returns 404 for both which is the safest choice, so this is a non-blocking note."
+  ],
+  "critical_code_review_comments": [
+    "routes_queue.py:283-292 hard-codes appointment_time='walk-in' — this is the root cause of the walk-in unique-violation bug and should be a unique-per-token value.",
+    "reception.tsx submitWalkIn (line 52-61) has no error surface: any API failure is silently swallowed by the finally block; add an error banner on failure.",
+    "routes_staff.py complete_consultation is order-sensitive: session.add(MedicalRecord(...)) is added only if body.medicines is truthy; if the doctor completes with only lab_orders (no meds) no MedicalRecord is created. Consider always writing a record so the visit is discoverable in Records.",
+    "routes_queue.py websocket path is declared as '/api/ws' on a router with prefix='/api', producing the effective route '/api/api/ws'. Not tested (per note, WS is 403 via ingress and frontend uses polling) but this looks unintentional.",
+    "All Phase-2 files remain under 700 lines; async/await usage is consistent; testIDs are present on all interactive elements verified in the UI run."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase2_staff.py"
+  ],
+  "success_rate": {"backend": "78% (14/18) — 4 failures all trace to the single walk-in bug", "frontend": "100% (all mandated Phase-2 testIDs present; navigation & login work)"},
+  "seed_data_creation": "No persistent seed data required. Tests mint their own TEST_-prefixed walk-in patients and rely on the existing seeded doctor/receptionist/patient identities from /app/memory/test_credentials.md.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Base URL: https://sanjeevan-postgres.preview.emergentagent.com. Dev OTP 123456. Phase-1 remains fully passing (iteration_1). Phase-2 has ONE blocking bug: /api/queue/walk-in 500s on the 2nd+ walk-in per (doctor, date) due to uq_appt_doctor_slot_live. After the main agent patches routes_queue.py to use a unique appointment_time (e.g. f'w{tok}'), re-run: pytest /app/backend/tests/test_phase2_staff.py -v (expect 18/18). Login flow requires clicking the go-to-app-button after OTP auto-verify (Continue on the 'You're signed in' screen) — not automatic navigation. Doctor consultation Save/Complete both persist correctly; complete propagates to the patient's /prescriptions and /lab-tests. /api/auth/supabase is wired and correctly returns 401 on a bogus token (SUPABASE_URL + ANON_KEY are configured).",
+  "rca_of_issue": "REPRODUCE: curl -H 'Auth: <receptionist token>' -X POST $BASE/api/queue/walk-in -d '{\"doctor_id\":\"<Meera>\",\"patient_name\":\"A\"}' twice. First call: 200. Second call today: 500. BACKTRACE (from /var/log/supervisor/backend.err.log): asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint \"uq_appt_doctor_slot_live\" DETAIL: Key (doctor_id, appointment_date, appointment_time)=(doc_<meera>, 2026-08-23, walk-in) already exists. -> raised from /app/backend/routes_queue.py:288 await session.flush(). CAUSE: /app/backend/routes_queue.py:285 sets appointment_time='walk-in' for every walk-in, and /app/backend/models.py:160-168 declares a partial-unique index on (doctor_id, appointment_date, appointment_time) WHERE status IN ('confirmed','in_progress','completed') to prevent double booking. Every walk-in creates a row with status='confirmed' + the same (doctor, date, 'walk-in') tuple, colliding with itself. MITIGATION: In routes_queue.py::add_walk_in, replace `appointment_time='walk-in'` with `appointment_time=f'w{tok}'` (or any unique short value fitting String(10)); also wrap the flush in try/except IntegrityError -> raise HTTPException(409). This preserves the existing double-booking protection for online bookings (which use real HH:MM strings) while allowing arbitrarily many walk-ins per doctor per day."
+}

@@ -111,6 +111,39 @@ user_problem_statement: >
   patient frontend was built from the high-fidelity prototype handoff.
 
 backend:
+  - task: "Reception console backend (staff doctors, walk-in token gen, queue next/skip/complete)"
+    implemented: true
+    working: true
+    file: "routes_staff.py, routes_queue.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Verified via curl+browser: GET /api/staff/doctors, POST /api/queue/walk-in mints token + queue entry, POST /api/queue/next advances, skip/complete work. Patient 403 on these routes."
+  - task: "Doctor consultation backend (today's patients, consultation get/save/complete, meds+labs)"
+    implemented: true
+    working: true
+    file: "routes_staff.py, models.py (Consultation)"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Verified: GET /api/doctor/today, GET /api/doctor/consultation/{id}, complete writes Consultation+Prescription(items)+LabTests+MedicalRecord, marks appt+queue completed, notifies patient. Propagation to patient records confirmed (Viral pharyngitis rx + CBC/Chest X-Ray labs)."
+  - task: "Supabase Auth token exchange (/api/auth/supabase)"
+    implemented: true
+    working: true
+    file: "routes_auth.py, core.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Verifies Supabase access token via GET {SUPABASE_URL}/auth/v1/user, maps by supabase_uid/phone/email, issues app session. Bogus token -> 401 (reachable & wired). Real Google/phone need dashboard provider config."
   - task: "Postgres migration (SQLAlchemy async + asyncpg on Supabase pooler)"
     implemented: true
     working: true
