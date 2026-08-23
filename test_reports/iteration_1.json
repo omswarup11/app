@@ -1,0 +1,49 @@
+{
+  "summary": "Sanjeevan (Postgres/Supabase rebuild) — Phase-1 patient app tested end-to-end. Backend: 23/23 pytest cases pass (auth OTP + rate limit + logout, role security, clinic search returning 3 Sanjeevan + Nashik filter + specialties + doctors, 5-day availability, concurrent double-booking 200/409 + DELETE frees the slot, payments amount ₹724 = 72400 paise for Cardiology, /payments/confirm idempotent, webhook 400 on missing/bad signature, patient A cannot GET patient B's appointment (404), signed file URL owner=200 / tampered u=403 / tampered t=403, queue/me returns full snapshot). Frontend (mobile web 390x844): 3-step login (phone -> send-otp -> otp auto-verify 123456 -> go-to-app), Home shows token hero + upcoming appointment + quick actions (qa-book/qa-reports/qa-prescriptions/qa-queue), Book flow (Sanjeevan search returns 3, clinic-result -> spec-Cardiology -> select-doctor -> day-N -> slot-HH:MM) navigates to Payment with ₹700+₹20+₹4=₹724 breakdown, pay-button confirms and shows Confirmation with minted token + track-queue-button, Queue tab shows GRAY 'Offline' pill (WS 403 is expected — polling fallback works), Records tab exposes records-tabs Segmented with Reports + Prescriptions. No deprecated Expo packages, no red-screen errors, no files exceed 700 lines. Only console warnings: 'shadow*' style props deprecated on web + 'props.pointerEvents' deprecated — cosmetic RNW warnings, safe to ignore.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "react-native-web shadow* deprecation",
+        "issue": "Console warns 'shadow* style props are deprecated. Use boxShadow'. Emitted by /app/frontend/src/theme.ts helper `shadow()` (uses shadowColor/shadowOffset/shadowOpacity/shadowRadius). Non-blocking on web; may need `boxShadow` equivalents when Expo/RNW upgrades enforce it."
+      },
+      {
+        "component": "react-native-web pointerEvents deprecation",
+        "issue": "Console warns 'props.pointerEvents is deprecated. Use style.pointerEvents'. Coming from a third-party (likely react-native-safe-area-context / navigation). No app code change needed today; keep an eye on the next Expo upgrade."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_sanjeevan_e2e.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Migrate `shadow()` helper in /app/frontend/src/theme.ts to also emit `boxShadow` for web to silence RNW deprecation warnings.",
+    "(Optional) Add server-side cleanup so a Patient's completed queue entries auto-hide older days (currently Ananya has completed entries from repeated E2E runs; not a functional bug)."
+  ],
+  "critical_code_review_comments": [
+    "All backend files are under 700 lines and follow the async SQLAlchemy pattern with proper error handling.",
+    "MongoDB `_id` not exposed — Postgres is the primary DB via SQLAlchemy; MONGO_URL/DB_NAME left in .env as template only (per agent note).",
+    "Slot double-booking correctness enforced at DB level via unique constraint on SlotHold; race handled with IntegrityError -> 409 and _fulfil's IntegrityError -> 409 in payment confirm.",
+    "Payment amount derivation server-side (derive_amount_paise) — client never gets to override the paise value.",
+    "Signed file URLs use HMAC-SHA256 with per-record + per-user + expiry; tampering either the user id or signature returns 403.",
+    "Rate limiter is in-memory (single-process) — fine for one uvicorn worker; if backend scales to multiple workers/replicas this must move to Redis.",
+    "Cosmetic: /app/frontend/src/theme.ts `shadow()` should also emit `boxShadow` for web to remove RNW deprecation warnings."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_sanjeevan_e2e.py"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100% (all mandated flows verified)"},
+  "seed_data_creation": "None. Tests use the built-in seed data (Ananya 9876543210 / receptionist 9000000004) and auto-register fresh 10-digit patients per test to avoid rate-limit interactions with seeded accounts.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend base URL: https://sanjeevan-postgres.preview.emergentagent.com (all routes prefixed /api). Dev OTP: 123456. send-otp is limited to 5/300s per phone — the pytest suite auto-generates fresh phones (starting with 8/7) for concurrent flows and reuses one session for the seeded Ananya account. WebSocket at /api/ws returns 403 through the preview ingress — this is expected and the frontend falls back to 8-second polling; do NOT fail queue tests on WS. When testing the queue endpoint on Ananya, be aware that repeated staff /queue/next runs will move her earliest 'waiting' entry to 'completed' — the conftest.py includes a session-start fixture that resets her earliest same-day queue entry to 'waiting' so the test remains deterministic. Pytest runs are parallelized via xdist LoadScopeScheduling; tests that pick slots on the shared Cardiology doctor use retry-with-different-slot to avoid parallel collisions."
+}
